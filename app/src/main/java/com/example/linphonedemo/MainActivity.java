@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
     private String TAG = "linphoneDemo";
     private Core core;
     private CallParams params;
+    private AccountCreator accountCreator;
     CoreListenerStub coreListenerStub = new CoreListenerStub(){
         @Override
         public void onGlobalStateChanged(Core lc, GlobalState gstate, String message) {
@@ -57,7 +58,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
     };
 
     AccountCreatorListenerStub accountCreatorListenerStub = new AccountCreatorListenerStub(){
@@ -81,6 +81,60 @@ public class MainActivity extends AppCompatActivity {
                 Log.e(TAG, "onCreateAccount - AccountCreated");
             }
         }
+
+        @Override
+        public void onActivateAccount(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onActivateAccount(creator, status, resp);
+            Log.e(TAG, "onActivateAccount");
+        }
+
+        @Override
+        public void onActivateAlias(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onActivateAlias(creator, status, resp);
+            Log.e(TAG, "onActivateAlias");
+        }
+
+        @Override
+        public void onIsAccountLinked(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onIsAccountLinked(creator, status, resp);
+            Log.e(TAG, "onIsAccountLinked");
+        }
+
+        @Override
+        public void onLinkAccount(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onLinkAccount(creator, status, resp);
+            Log.e(TAG, "onLinkAccount");
+        }
+
+        @Override
+        public void onIsAliasUsed(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onIsAliasUsed(creator, status, resp);
+            Log.e(TAG, "onIsAliasUsed");
+        }
+
+        @Override
+        public void onIsAccountActivated(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onIsAccountActivated(creator, status, resp);
+            Log.e(TAG, "onIsAccountActivated");
+        }
+
+        @Override
+        public void onLoginLinphoneAccount(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onLoginLinphoneAccount(creator, status, resp);
+            Log.e(TAG, "onLoginLinphoneAccount");
+        }
+
+        @Override
+        public void onUpdateAccount(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onUpdateAccount(creator, status, resp);
+            Log.e(TAG, "onUpdateAccount");
+        }
+
+        @Override
+        public void onRecoverAccount(AccountCreator creator, AccountCreator.Status status, String resp) {
+            super.onRecoverAccount(creator, status, resp);
+            Log.e(TAG, "onRecoverAccount");
+        }
     };
 
     @Override
@@ -90,10 +144,6 @@ public class MainActivity extends AppCompatActivity {
 
         core = Factory.instance().createCore("/data/user/0/org.linphone.debug/files/.linphonerc","/data/user/0/org.linphone.debug/files/linphonerc",MainActivity.this);
         core.addListener(coreListenerStub);
-
-        Log.e(TAG, "MainActivity");
-        AccountCreator accountCreator = core.createAccountCreator("https://subscribe.linphone.org:444/wizard.php");
-        accountCreator.addListener(accountCreatorListenerStub);
         params = core.createCallParams(null);
 //        mBandwidthManager.updateWithProfileSettings(params);
 
@@ -102,7 +152,23 @@ public class MainActivity extends AppCompatActivity {
         params.enableLowBandwidth(true);
 //        Log.d("[Call Manager] Low bandwidth enabled in call params");
 
+
+        accountCreator = core.createAccountCreator("https://subscribe.linphone.org:444/wizard.php");
+        accountCreator.addListener(accountCreatorListenerStub);
+
+
         Button btnCall = findViewById(R.id.btnCall);
+        Button btnCreateAccount = findViewById(R.id.btnCreateAccount);
+        btnCreateAccount.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                accountCreator.reset();
+                accountCreator.setPhoneNumber("8802508993", "+91");
+                accountCreator.setUsername("8802508993");
+                AccountCreator.Status status = accountCreator.recoverAccount();
+                Log.e(TAG, "MainActivity - status " + status + accountCreator.isAccountExist());
+            }
+        });
         btnCall.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -121,5 +187,10 @@ public class MainActivity extends AppCompatActivity {
                 core.inviteAddressWithParams(address, params);
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
     }
 }
