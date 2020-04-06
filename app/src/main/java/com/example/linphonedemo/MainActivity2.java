@@ -141,6 +141,8 @@ public class MainActivity2 extends AppCompatActivity {
                 params.enableLowBandwidth(true);
 //        Log.d("[Call Manager] Low bandwidth enabled in call params");
                 core.inviteAddressWithParams(address, params);
+
+                core.enableMic(true);
             }
         });
     }
