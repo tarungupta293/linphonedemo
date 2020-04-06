@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">LinPhoneDemo</string>
+
+    <string name="default_conference_factory_uri" translatable="false">sip:conference-factory@sip.linphone.org</string>
+    <string name="default_domain" translatable="false">sip.linphone.org</string>
+    <string name="default_lime_x3dh_server_url" translatable="false">https://lime.linphone.org/lime-server/lime-server.php</string>
 </resources>
