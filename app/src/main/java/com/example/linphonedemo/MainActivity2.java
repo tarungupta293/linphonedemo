@@ -7,8 +7,10 @@ import android.os.FileUtils;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import org.linphone.core.AccountCreator;
@@ -24,6 +26,7 @@ import org.linphone.core.Factory;
 import org.linphone.core.GlobalState;
 import org.linphone.core.ProxyConfig;
 import org.linphone.core.tools.H264Helper;
+import org.linphone.mediastream.video.capture.CaptureTextureView;
 
 import java.util.Locale;
 import java.util.Timer;
@@ -32,10 +35,14 @@ import java.util.TimerTask;
 public class MainActivity2 extends AppCompatActivity {
 
     private String TAG = "linphoneDemo";
-    private Core core;
+    public static Core core;
     private CallParams params;
     private AccountCreator accountCreator;
     private Timer mTimer;
+    private TextureView mLocalPreview, mRemoteVideo;
+    private VideoZoomHelper mZoomHelper;
+    private RelativeLayout layoutButtons;
+
     private Handler sHandler = new Handler(Looper.getMainLooper());
 
     CoreListenerStub coreListenerStub = new CoreListenerStub(){
@@ -70,6 +77,18 @@ public class MainActivity2 extends AppCompatActivity {
                         && call.getCallLog().getStatus() == Call.Status.Missed) {
                     Log.e(TAG,"onCallStateChanged - " + "Released - Missed");
                 }
+            }else if (cstate == Call.State.StreamsRunning) {
+                Log.e(TAG,"onCallStateChanged - " + "StreamsRunning");
+                boolean videoEnabled =
+                        core.videoSupported() && core.videoEnabled()
+                                && call != null
+                                && call.getCurrentParams().videoEnabled();
+//                mRemoteVideo.setVisibility(videoEnabled ? View.VISIBLE : View.GONE);
+//                mLocalPreview.setVisibility(videoEnabled ? View.VISIBLE : View.GONE);
+//                layoutButtons.setVisibility(videoEnabled ? View.GONE : View.VISIBLE);
+
+            } else if (cstate == Call.State.UpdatedByRemote) {
+                Log.e(TAG,"onCallStateChanged - " + "UpdatedByRemote");
             }
         }
     };
@@ -106,9 +125,14 @@ public class MainActivity2 extends AppCompatActivity {
             }
         };
 
-
+        mLocalPreview = findViewById(R.id.local_preview_texture);
+        mRemoteVideo = findViewById(R.id.remote_video_texture);
         Button btnCall = findViewById(R.id.btnCall);
         Button btnCreateAccount = findViewById(R.id.btnCreateAccount);
+        Button btnVideo = findViewById(R.id.btnVideo);
+//        layoutButtons = findViewById(R.id.layoutButtons);
+        mZoomHelper = new VideoZoomHelper(this, mRemoteVideo);
+
         btnCreateAccount.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -143,6 +167,40 @@ public class MainActivity2 extends AppCompatActivity {
                 core.inviteAddressWithParams(address, params);
 
                 core.enableMic(true);
+            }
+        });
+
+        btnVideo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Call call = core.getCurrentCall();
+                if (call.getCurrentParams().videoEnabled()) {
+                    CallParams params = core.createCallParams(call);
+                    params.enableVideo(false);
+                    call.update(params);
+                } else {
+
+                    if (call.getState() == Call.State.End || call.getState() == Call.State.Released){
+                        Log.e(TAG, "call released");
+                        return;
+                    }
+
+                    call.enableCamera(true);
+                    /*if (call.getRemoteParams().lowBandwidthEnabled()) {
+                        Log.e(TAG, "[Call Manager] Remote has low bandwidth, won't be able to do video");
+                    }*/
+                    CallParams params = core.createCallParams(call);
+                    params.enableVideo(true);
+                    params.setAudioBandwidthLimit(0); // disable limitation
+
+                    if (params.videoEnabled()) {
+                        call.update(params);
+                        Log.e(TAG, "video call - " + "sent");
+                    }else{
+                        Log.e(TAG, "video call - " + "not - sent");
+                    }
+                }
             }
         });
     }
@@ -212,9 +270,14 @@ public class MainActivity2 extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+//        mLocalPreview.setVisibility(View.GONE);
+//        mRemoteVideo.setVisibility(View.GONE);
+//        layoutButtons.setVisibility(View.VISIBLE);
         core = Factory.instance().createCore("/data/user/0/org.linphone.debug/files/.linphonerc","/data/user/0/org.linphone.debug/files/linphonerc", MainActivity2.this);
 //        core = Factory.instance().createCore(null,null, MainActivity2.this);
-
+        core.setNativeVideoWindowId(mRemoteVideo);
+        core.setNativePreviewWindowId(mLocalPreview);
         core.addListener(coreListenerStub);
         core.start();
 
@@ -257,5 +320,16 @@ public class MainActivity2 extends AppCompatActivity {
         if (mTimer != null)
             mTimer.cancel();
         accountCreator.removeListener(accountCreatorListenerStub);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mLocalPreview = null;
+        mRemoteVideo = null;
+        if (mZoomHelper != null) {
+            mZoomHelper.destroy();
+            mZoomHelper = null;
+        }
     }
 }
